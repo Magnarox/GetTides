@@ -8,6 +8,7 @@ import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 
+import java.io.*;
 import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.HttpURLConnection;
@@ -17,10 +18,15 @@ import java.util.*;
 
 public class Main {
 
+    private static final String CSV_SEPARATOR = ";";
+    private static final String CSV_FILENAME = "tides.csv";
+
     public static void main(String[] args) {
         System.out.println("RUN");
 
         try {
+            File file = new File(CSV_FILENAME);
+            if (file.exists()) file.delete();
             CookieManager cookieManager = new CookieManager();
             CookieHandler.setDefault(cookieManager);
 
@@ -28,9 +34,26 @@ public class Main {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
             Calendar calendar = new GregorianCalendar(2012, 0, 1);
 
-            HttpURLConnection con = prepareRequest(sdf.format(calendar.getTime()));
-            List<Tide> extract = extractData(con, calendar);
-            System.out.println(extract);
+            List<Tide> extract = new ArrayList<>();
+            while (calendar.get(Calendar.YEAR) < 2021) {
+                String nextParam = sdf.format(calendar.getTime());
+                System.out.println("Param : " + nextParam);
+                HttpURLConnection con = prepareRequest(nextParam);
+                extract.addAll(extractData(con, calendar));
+
+                calendar.set(Calendar.HOUR_OF_DAY, 0);
+                calendar.set(Calendar.MINUTE, 0);
+
+                if (extract.size() > 1000) {
+                    writeToCSV(extract);
+                    extract.clear();
+                }
+            }
+
+            if (!extract.isEmpty()) {
+                writeToCSV(extract);
+                extract.clear();
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -111,5 +134,24 @@ public class Main {
         }
 
         return textNodes;
+    }
+
+    public static void writeToCSV(List<Tide> tidesList) throws Exception {
+        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy HH:mm");
+        try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(CSV_FILENAME, true), "UTF-8"))) {
+            for (Tide tide : tidesList) {
+                StringBuffer oneLine = new StringBuffer();
+                oneLine.append(sdf.format(tide.getDate()));
+                oneLine.append(CSV_SEPARATOR);
+                oneLine.append(tide.getHauteur() != null ? tide.getHauteur() : "");
+                oneLine.append(CSV_SEPARATOR);
+                oneLine.append(tide.getCoef() != null ? tide.getCoef() : "");
+                oneLine.append(CSV_SEPARATOR);
+                oneLine.append(tide.getBassePleine());
+                bw.write(oneLine.toString());
+                bw.newLine();
+            }
+            bw.flush();
+        }
     }
 }
