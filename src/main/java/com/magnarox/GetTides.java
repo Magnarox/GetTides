@@ -16,7 +16,7 @@ import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
-public class Main {
+public class GetTides {
 
     private static final String CSV_SEPARATOR = ";";
     private static final String CSV_FILENAME = "tides.csv";
@@ -25,6 +25,17 @@ public class Main {
         System.out.println("RUN");
 
         try {
+            if(args.length != 2) {
+                System.out.println("Need 2 params - Param1 : Start year / Param2 : End year");
+                System.exit(0);
+            }
+            int startYear = Integer.valueOf(args[0]);
+            int endYear = Integer.valueOf(args[1]);
+            if(startYear >= endYear) {
+                System.out.println("Start year must be greater than end year");
+                System.exit(0);
+            }
+
             File file = new File(CSV_FILENAME);
             if (file.exists()) file.delete();
             CookieManager cookieManager = new CookieManager();
@@ -32,10 +43,10 @@ public class Main {
 
             TimeZone.setDefault(TimeZone.getTimeZone("Europe/Paris"));
             SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
-            Calendar calendar = new GregorianCalendar(2012, 0, 1);
+            Calendar calendar = new GregorianCalendar(startYear, 0, 1);
 
             List<Tide> extract = new ArrayList<>();
-            while (calendar.get(Calendar.YEAR) < 2021) {
+            while (calendar.get(Calendar.YEAR) < endYear) {
                 String nextParam = sdf.format(calendar.getTime());
                 System.out.println("Param : " + nextParam);
                 HttpURLConnection con = prepareRequest(nextParam);
